@@ -1,0 +1,6 @@
+[submodule "se-logger"]
+	path = se-logger
+	url = https://github.com/Expaso/se-logger.git
+[submodule "solaredge/se-logger"]
+	path = solaredge/se-logger
+	url = https://github.com/Expaso/se-logger.git
