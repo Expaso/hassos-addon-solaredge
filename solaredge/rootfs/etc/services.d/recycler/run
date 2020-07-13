@@ -1,0 +1,28 @@
+#!/usr/bin/with-contenv bashio
+
+bashio::log.info "Starting recycler.."
+
+# wait for the time to get set
+while [ `date -u +%Y` == "1970" ]
+do
+	bashio::log.info "Waiting for correct time..."
+	sleep 1
+done
+
+# Create a function to kill the logger every midnight (when the inverters are idle)
+# The first argument is the PID to kill
+today=`date -u +%Y%m%d`
+while true
+do
+	# echo "Waiting for date to flip.. $today" 
+	if [ `date -u +%Y%m%d` != $today ]
+	then
+		bashio::log.info "Recycling capture process!"
+		s6-svc -wR -r /services.d/capturer
+		today=`date -u +%Y%m%d`
+		return
+	fi
+	sleep 300
+done
+
+

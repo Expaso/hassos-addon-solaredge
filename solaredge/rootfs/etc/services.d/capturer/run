@@ -1,0 +1,49 @@
+#!/usr/bin/with-contenv bashio
+
+bashio::log.notice "Welcome to Solaredge Data Capture!"
+
+capture_path="/data/traffic/"
+se_logger_service="/opt/se-logger/liveupdate.py"
+
+#Create capture path
+mkdir -p $capture_path
+chmod a+x $se_logger_service
+
+#Write the SE-Logger's config file out
+bashio::log.info "Writing config file..."
+cat > /opt/se-logger/config.py <<- EOF
+#!/usr/bin/env python
+inverter_private_key = b'$(bashio::config 'inverter_private_key')'
+db_user = "$(bashio::config 'database_user')"
+db_pass = "$(bashio::config 'database_password')"
+db_name = "$(bashio::config 'database_name')"
+db_host = "$(bashio::config 'database_host')"
+db_port = $(bashio::config 'database_port')
+EOF
+
+INTERFACE=eth0
+FILTER=tcp
+PREFIX=solaredge-
+
+rm -f /data/tcpdump.log
+
+# wait for the time to get set
+while [ `date -u +%Y` == "1970" ]
+do
+	bashio::log.info "Waiting for correct time..."
+	sleep 1
+done
+
+#chmod 707 "/usr/share/timescaledb/002_timescaledb_tune.sh"
+
+# Start dumping the traffic on the bridge
+bashio::log.info "Starting Solaredge Bridge.."
+/usr/bin/stdbuf -i0 -o0 -e0 /usr/sbin/tcpdump -i $INTERFACE -U -w - ${FILTER} 2>> /data/tcpdump.log | \
+	tee ${capture_path}$PREFIX`date -u +%Y%m%d%H%M%S`.pcap | \
+	/usr/bin/python3 -u ${se_logger_service} - &
+solaredge_pid=$!
+bashio::log.info "done"
+
+# And let it roll
+bashio::log.notice "Solaredge Bridge is running!"
+wait "${solaredge_pid}"

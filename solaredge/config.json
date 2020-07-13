@@ -2,7 +2,7 @@
   "name": "Solaredge Capture",
   "version": "1.0.15",
   "slug": "solaredge",
-  "description": "Captures SolarEdge inverter network traffic, decodes it and forwards it to InfluxDB",
+  "description": "Captures SolarEdge inverter network traffic, decodes it and forwards it to PostgreSql",
   "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
   "startup": "services",
   "boot": "auto",
@@ -27,6 +27,5 @@
 	"capture_interface": "str"
     },
   "ports": {
-    "8000/tcp": 8000
     }
 }

@@ -28,9 +28,12 @@ RUN echo "**** install Python ****" && \
     if [ ! -e /usr/bin/pip ]; then ln -s pip3 /usr/bin/pip ; fi
 #--------------------------------------------------------------------------
 
-RUN pip install --no-cache-dir \
-	psycopg2 \
-	pycryptodome
+
+RUN apk add --no-cache \
+	py3-psycopg2
+
+RUN /usr/bin/pip install --no-cache-dir \
+    pycryptodome
 
 # Copy data for add-on
 COPY se-logger/opt/* /opt/se-logger
