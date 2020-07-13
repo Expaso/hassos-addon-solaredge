@@ -1,22 +1,49 @@
 ARG BUILD_FROM
 FROM $BUILD_FROM
 
+# Set shell
+SHELL ["/bin/bash", "-o", "pipefail", "-c"]
+
 ENV LANG C.UTF-8
 
 # Install requirements for add-on
-RUN apk add --no-cache python3 tcpdump coreutils build-base python3-dev
-RUN pip3 install influxdb pycryptodome
-# \ tshark xxd
+RUN apk add --no-cache \
+	tcpdump \
+	coreutils \
+	build-base
 
-# Set data as our working dir. 
-WORKDIR /data
+#--------------------------------------------------------------------------
+# Install Python 3
+# This hack is widely applied to avoid python printing issues in docker containers.
+# See: https://github.com/Docker-Hub-frolvlad/docker-alpine-python3/pull/13
+ENV PYTHONUNBUFFERED=1
+RUN echo "**** install Python ****" && \
+    apk add --no-cache python3 python3-dev && \
+    if [ ! -e /usr/bin/python ]; then ln -sf python3 /usr/bin/python ; fi && \
+    \
+    echo "**** install pip ****" && \
+    python3 -m ensurepip && \
+    rm -r /usr/lib/python*/ensurepip && \
+    pip3 install --no-cache --upgrade pip setuptools wheel && \
+    if [ ! -e /usr/bin/pip ]; then ln -s pip3 /usr/bin/pip ; fi
+#--------------------------------------------------------------------------
+
+RUN pip install --no-cache-dir \
+	psycopg2 \
+	pycryptodome
 
 # Copy data for add-on
 COPY se-logger/opt/* /opt/se-logger
 
-# Copy runfile and give execute permissions
-COPY run.sh /
-RUN chmod a+x /run.sh
+# --------------------------------------
+# Finish image
+# --------------------------------------
 
-CMD [ "/run.sh" ]
+# Make sure that S6 is not so hard on our service startup/shutdown
+ENV \
+    S6_SERVICES_GRACETIME=18000
 
+# Copy data
+COPY rootfs /
+
+WORKDIR /
