@@ -1,0 +1,158 @@
+ .vscode/launch.json                             |  15 +++++++++++++++
+ opt/se-logger/.vscode/launch.json               |  17 +++++++++++++++++
+ opt/se-logger/.vscode/settings.json             |   5 +++++
+ opt/se-logger/__pycache__/config.cpython-38.pyc | Bin 0 -> 356 bytes
+ opt/se-logger/config.py                         |   9 +++++++++
+ opt/se-logger/liveupdate.py                     |  22 ++++++++++++----------
+ 6 files changed, 58 insertions(+), 10 deletions(-)
+
+diff --git a/.vscode/launch.json b/.vscode/launch.json
+new file mode 100644
+index 0000000..24ca2d9
+--- /dev/null
++++ b/.vscode/launch.json
+@@ -0,0 +1,15 @@
++{
++	// Use IntelliSense to learn about possible attributes.
++	// Hover to view descriptions of existing attributes.
++	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
++	"version": "0.2.0",
++	"configurations": [
++		{
++			"name": "Python: Current File",
++			"type": "python",
++			"request": "launch",
++			"program": "${file}",
++			"console": "integratedTerminal"
++		}
++	]
++}
+\ No newline at end of file
+diff --git a/opt/se-logger/.vscode/launch.json b/opt/se-logger/.vscode/launch.json
+new file mode 100644
+index 0000000..b220f27
+--- /dev/null
++++ b/opt/se-logger/.vscode/launch.json
+@@ -0,0 +1,17 @@
++{
++	// Use IntelliSense to learn about possible attributes.
++	// Hover to view descriptions of existing attributes.
++	// For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
++	"version": "0.2.0",
++	"configurations": [
++		
++		{
++			"name": "Python: Current File",
++			"type": "python",
++			"request": "launch",
++			"program": "${file}",
++			"console": "integratedTerminal",
++			"args": ["solaredge-20200420210737.pcap"]
++		}
++	]
++}
+\ No newline at end of file
+diff --git a/opt/se-logger/.vscode/settings.json b/opt/se-logger/.vscode/settings.json
+new file mode 100644
+index 0000000..a6ce35d
+--- /dev/null
++++ b/opt/se-logger/.vscode/settings.json
+@@ -0,0 +1,5 @@
++{
++	"python.pythonPath": "C:\\Python38\\python.exe",
++	"python.linting.pylintEnabled": true,
++	"python.linting.enabled": true
++}
+\ No newline at end of file
+diff --git a/opt/se-logger/__pycache__/config.cpython-38.pyc b/opt/se-logger/__pycache__/config.cpython-38.pyc
+new file mode 100644
+index 0000000..38e7ca0
+Binary files /dev/null and b/opt/se-logger/__pycache__/config.cpython-38.pyc differ
+diff --git a/opt/se-logger/config.py b/opt/se-logger/config.py
+new file mode 100644
+index 0000000..3382af5
+--- /dev/null
++++ b/opt/se-logger/config.py
+@@ -0,0 +1,9 @@
++#!/usr/bin/env python
++inverter_private_key = b'\xcc\x83\xbc\x16\xb8\x82\x8e\x1b\x57\xfd\x06\x16\x21\x58\x1d\x3d'
++db_user = "solaredge"
++db_pass = "8edce4a756"
++db_name = "solaredge"
++db_host = "homeassistant.local"
++db_port = 45678
++capture_interface="solaredge"
++
+diff --git a/opt/se-logger/liveupdate.py b/opt/se-logger/liveupdate.py
+index 6c625f7..d266f87 100644
+--- a/opt/se-logger/liveupdate.py
++++ b/opt/se-logger/liveupdate.py
+@@ -21,7 +21,7 @@
+ # along with se-logger.  If not, see <http://www.gnu.org/licenses/>.
+ #
+ 
+-import struct, sys, MySQLdb, time
++import struct, sys, psycopg2, time
+ from collections import namedtuple
+ from config import db_user, db_pass, db_name, db_host, db_port, inverter_private_key
+ 
+@@ -375,10 +375,10 @@ class DBManager:
+     self.retries = retries
+     while retries:
+       try:
+-        self.conn = MySQLdb.connect(user=user, passwd=passwd, db=db, host=host, port=port)
++        self.conn = psycopg2.connect(user=user, password=passwd, dbname=db, host=host, port=port)
+         self.cursor = self.conn.cursor()
+         retries = 0
+-      except MySQLdb.Error as e:
++      except psycopg2.Error as e:
+         retries -= 1
+         if not retries:
+           raise
+@@ -391,7 +391,7 @@ class DBManager:
+       try:
+         self.cursor.execute(*args)
+         return
+-      except MySQLdb.OperationalError as e:
++      except psycopg2.OperationalError as e:
+         retries -= 1
+         if not retries:
+           raise
+@@ -498,7 +498,7 @@ def eprint(message):
+ # Connect to database and get last 0503 message.
+ db = DBManager(db_user, db_pass, db_name, db_host, db_port)
+ db.execute("SELECT last_0503 FROM live_update")
+-last_0503 = db.fetchone()[0]
++last_0503 = bytes(db.fetchone()[0])
+ 
+ parser = SEParser(inverter_private_key, decryptor=SEDecrypt(inverter_private_key, last_0503), msg_filt=set((0x0500, 0x0503)))
+ reader = PCAPParser()
+@@ -520,21 +520,23 @@ for filename in sys.argv[1:]:
+     for telem in parse0500(msg):
+       if "op_id" in telem:
+         db.execute(
+-          "INSERT IGNORE INTO telemetry_optimizers "
++          "INSERT INTO telemetry_optimizers "
+           "(op_id, timestamp, uptime, v_in, v_out, i_in, e_day, temperature) VALUES "
+-          "(%(op_id)s, %(timestamp)s, %(uptime)s, %(v_in)s, %(v_out)s, %(i_in)s, %(e_day)s, %(temperature)s)",
++          "(%(op_id)s, %(timestamp)s, %(uptime)s, %(v_in)s, %(v_out)s, %(i_in)s, %(e_day)s, %(temperature)s)"
++		  "ON CONFLICT (op_id, timestamp) DO NOTHING",
+           telem)
+         updated = True
+       elif "v_ac" in telem:
+         db.execute(
+-          "INSERT IGNORE INTO telemetry_inverter "
++          "INSERT INTO telemetry_inverter "
+           "(inv_id, timestamp, temperature, e_day, de_day, v_ac, i_ac, frequency, v_dc, e_total, i_rcd, mode, p_active, p_apparent, p_reactive) VALUES "
+-          "(%(inv_id)s, %(timestamp)s, %(temperature)s, %(e_day)s, %(de_day)s, %(v_ac)s, %(i_ac)s, %(frequency)s, %(v_dc)s, %(e_total)s, %(i_rcd)s, %(mode)s, %(p_active)s, %(p_apparent)s, %(p_reactive)s)",
++          "(%(inv_id)s, %(timestamp)s, %(temperature)s, %(e_day)s, %(de_day)s, %(v_ac)s, %(i_ac)s, %(frequency)s, %(v_dc)s, %(e_total)s, %(i_rcd)s, %(mode)s, %(p_active)s, %(p_apparent)s, %(p_reactive)s)"
++		  "ON CONFLICT (inv_id, timestamp) DO NOTHING",
+           telem)
+         updated = True
+       elif "v_ac1" in telem:
+         db.execute(
+-          "INSERT IGNORE INTO telemetry_inverter_3phase "
++          "INSERT INTO telemetry_inverter_3phase "
+           "(inv_id, timestamp, temperature, e_day, de_day, v_ac1, v_ac2, v_ac3, i_ac1, i_ac2, i_ac3, frequency1, frequency2, frequency3, v_dc, e_total, i_rcd, mode, v_1to2, v_2to3, v_3to1, p_active1, p_active2, p_active3, p_apparent1, p_apparent2, p_apparent3, p_reactive1, p_reactive2, p_reactive3) VALUES "
+           "(%(inv_id)s, %(timestamp)s, %(temperature)s, %(e_day)s, %(de_day)s, %(v_ac1)s, %(v_ac2)s, %(v_ac3)s, %(i_ac1)s, %(i_ac2)s, %(i_ac3)s, %(frequency1)s, %(frequency2)s, %(frequency3)s, %(v_dc)s, %(e_total)s, %(i_rcd)s, %(mode)s, %(v_1to2)s, %(v_2to3)s, %(v_3to1)s, %(p_active1)s, %(p_active2)s, %(p_active3)s, %(p_apparent1)s, %(p_apparent2)s, %(p_apparent3)s, %(p_reactive1)s, %(p_reactive2)s, %(p_reactive3)s)",
+           telem)

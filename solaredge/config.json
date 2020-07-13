@@ -1,0 +1,32 @@
+{
+  "name": "Solaredge Capture",
+  "version": "1.0.15",
+  "slug": "solaredge",
+  "description": "Captures SolarEdge inverter network traffic, decodes it and forwards it to InfluxDB",
+  "arch": ["armhf", "armv7", "aarch64", "amd64", "i386"],
+  "startup": "services",
+  "boot": "auto",
+  "panel_icon": "mdi:solar-power",
+  "host_network": true,
+  "options": { 
+	"inverter_private_key": "\\x01\\x02\\x03\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00",
+	"database_user": "user",
+	"database_password": "password",
+	"database_name": "database",
+	"database_host": "host",
+	"database_port": 123,
+	"capture_interface": "br0"
+  },
+  "schema": {
+	"inverter_private_key": "str?",
+	"database_user": "str",
+	"database_password": "str",
+	"database_name": "str",
+	"database_host": "str",
+	"database_port": "int",
+	"capture_interface": "str"
+    },
+  "ports": {
+    "8000/tcp": 8000
+    }
+}
