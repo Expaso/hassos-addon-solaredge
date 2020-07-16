@@ -9,6 +9,7 @@ ENV LANG C.UTF-8
 # Install requirements for add-on
 RUN apk add --no-cache \
 	tcpdump \
+    iptables \
 	coreutils \
 	build-base
 

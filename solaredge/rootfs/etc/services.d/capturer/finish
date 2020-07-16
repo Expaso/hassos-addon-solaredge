@@ -1,0 +1,8 @@
+#!/usr/bin/with-contenv bashio
+
+# ==============================================================================
+# Take down the bridge when the service stops
+# ==============================================================================
+INTERFACE="$(bashio::config 'capture_interface')"
+iptables -D DOCKER-USER -i $INTERFACE -o $INTERFACE -j ACCEPT || true
+ip link set $INTERFACE down

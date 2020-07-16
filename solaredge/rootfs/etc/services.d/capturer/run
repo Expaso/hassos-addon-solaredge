@@ -21,11 +21,14 @@ db_host = "$(bashio::config 'database_host')"
 db_port = $(bashio::config 'database_port')
 EOF
 
-INTERFACE=eth0
+INTERFACE="$(bashio::config 'capture_interface')"
 FILTER=tcp
 PREFIX=solaredge-
 
 rm -f /data/tcpdump.log
+
+# Remove any non-zero files. We don't need them
+find -name '/data/traffic/*' -size 0 -delete
 
 # wait for the time to get set
 while [ `date -u +%Y` == "1970" ]
@@ -34,7 +37,22 @@ do
 	sleep 1
 done
 
-#chmod 707 "/usr/share/timescaledb/002_timescaledb_tune.sh"
+bashio::log.info "Setting up bridge network.."
+# Create interfaces
+ip link add name $INTERFACE type bridge || true
+ip link add link eth0 name eth0.11 type vlan id 11 || true
+ip link add link eth0 name eth0.12 type vlan id 12 || true
+# Bring them up
+ip link set $INTERFACE up
+ip link set eth0.11 up
+ip link set eth0.12 up
+# Enslave them to the bridge
+ip link set eth0.11 master $INTERFACE
+ip link set eth0.12 master $INTERFACE
+# Enable traffic forwarding in the firewall
+iptables -D DOCKER-USER -i $INTERFACE -o $INTERFACE -j ACCEPT || true
+iptables -I DOCKER-USER -i $INTERFACE -o $INTERFACE -j ACCEPT
+bashio::log.info "Done"
 
 # Start dumping the traffic on the bridge
 bashio::log.info "Starting Solaredge Bridge.."
