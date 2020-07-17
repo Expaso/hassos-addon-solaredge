@@ -18,7 +18,7 @@ do
 	if [ `date -u +%Y%m%d` != $today ]
 	then
 		bashio::log.info "Recycling capture process!"
-		s6-svc -r /etc/services.d/capturer
+		s6-svc -r /var/run/s6/services/capturer/
 		today=`date -u +%Y%m%d`
 		return
 	fi
