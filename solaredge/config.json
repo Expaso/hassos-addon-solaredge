@@ -8,6 +8,7 @@
   "boot": "auto",
   "panel_icon": "mdi:solar-power",
   "host_network": true,
+  "init": false,
   "privileged": ["NET_ADMIN"],
   "options": { 
 	"inverter_private_key": "\\x01\\x02\\x03\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00\\x00",
