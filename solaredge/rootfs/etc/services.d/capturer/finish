@@ -4,5 +4,20 @@
 # Take down the bridge when the service stops
 # ==============================================================================
 INTERFACE="$(bashio::config 'capture_interface')"
-iptables -D DOCKER-USER -i $INTERFACE -o $INTERFACE -j ACCEPT || true
+
+# old school
+# iptables -D DOCKER-USER -i $INTERFACE -o $INTERFACE -j ACCEPT || true
+
+# Delete all rules with this comment
+# new school
+bashio::log.info "Removing firewall rules.."
+for h in $(nft -a list chain filter DOCKER-USER | awk '/.* comment \"solaredgebridge\" # handle [0-9]+/ {print $NF}')
+do
+    nft delete rule filter DOCKER-USER handle $h || true
+    bashio::log.info "Removed rule with handle $h"
+done
+bashio::log.info "done"
+
+bashio::log.info "Disabling interface ${INTERFACE}"
 ip link set $INTERFACE down
+bashio::log.info "done"

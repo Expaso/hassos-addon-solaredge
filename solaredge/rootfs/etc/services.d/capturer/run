@@ -43,20 +43,30 @@ ip link add name $INTERFACE type bridge || true
 ip link add link eth0 name eth0.11 type vlan id 11 || true
 ip link add link eth0 name eth0.12 type vlan id 12 || true
 # Bring them up
+bashio::log.info "Bringin interfaces UP.."
 ip link set $INTERFACE up
 ip link set eth0.11 up
 ip link set eth0.12 up
 # Enslave them to the bridge
+bashio::log.info "Enslaving bridge interfaces.."
 ip link set eth0.11 master $INTERFACE
 ip link set eth0.12 master $INTERFACE
 # Enable traffic forwarding in the firewall
-iptables -D DOCKER-USER -i $INTERFACE -o $INTERFACE -j ACCEPT || true
-iptables -I DOCKER-USER -i $INTERFACE -o $INTERFACE -j ACCEPT
-bashio::log.info "Done"
+bashio::log.info "Setup traffic forwarding in netfilter.."
+
+# old school
+# iptables -D DOCKER-USER -i $INTERFACE -o $INTERFACE -j ACCEPT || true
+# iptables -I DOCKER-USER -i $INTERFACE -o $INTERFACE -j ACCEPT
+
+# new school
+nft insert rule ip filter DOCKER-USER iifname $INTERFACE oifname $INTERFACE counter accept comment \"solaredgebridge\"
+bashio::log.info "done"
+
+# sleep infinity
 
 # Start dumping the traffic on the bridge
 bashio::log.info "Starting Solaredge Bridge.."
-/usr/bin/stdbuf -i0 -o0 -e0 /usr/sbin/tcpdump -i $INTERFACE -U -w - ${FILTER} 2>> /data/tcpdump.log | \
+/usr/bin/stdbuf -i0 -o0 -e0 tcpdump -i $INTERFACE -U --micro -w - ${FILTER} 2>> /data/tcpdump.log | \
 	tee ${capture_path}$PREFIX`date -u +%Y%m%d%H%M%S`.pcap | \
 	/usr/bin/python3 -u ${se_logger_service} - &
 solaredge_pid=$!

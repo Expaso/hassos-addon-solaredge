@@ -10,6 +10,7 @@ ENV LANG C.UTF-8
 RUN apk add --no-cache \
 	tcpdump \
     iptables \
+    nftables \
 	coreutils \
 	build-base
 
