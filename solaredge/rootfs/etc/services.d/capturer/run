@@ -40,17 +40,17 @@ done
 bashio::log.info "Setting up bridge network.."
 # Create interfaces
 ip link add name $INTERFACE type bridge || true
-ip link add link eth0 name eth0.11 type vlan id 11 || true
-ip link add link eth0 name eth0.12 type vlan id 12 || true
+ip link add link end0 name end0.11 type vlan id 11 || true
+ip link add link end0 name end0.12 type vlan id 12 || true
 # Bring them up
 bashio::log.info "Bringin interfaces UP.."
 ip link set $INTERFACE up
-ip link set eth0.11 up
-ip link set eth0.12 up
+ip link set end0.11 up
+ip link set end0.12 up
 # Enslave them to the bridge
 bashio::log.info "Enslaving bridge interfaces.."
-ip link set eth0.11 master $INTERFACE
-ip link set eth0.12 master $INTERFACE
+ip link set end0.11 master $INTERFACE
+ip link set end0.12 master $INTERFACE
 # Enable traffic forwarding in the firewall
 bashio::log.info "Setup traffic forwarding in netfilter.."
 
